@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SmartClinicQ - Clinic Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+<h2>Clinic Queue Dashboard</h2>
+
+<table border="1">
+  <thead>
+    <tr>
+      <th>Queue No</th>
+      <th>Name</th>
+      <th>Time</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody id="queueTable"></tbody>
+</table>
+
+<script>
+const sampleQueue = [
+  { name: "Ali", time: "09:00", status: "Waiting" },
+  { name: "Aisyah", time: "09:15", status: "Waiting" }
+];
+
+const table = document.getElementById("queueTable");
+
+sampleQueue.forEach((item, index) => {
+  table.innerHTML += `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${item.name}</td>
+      <td>${item.time}</td>
+      <td>${item.status}</td>
+    </tr>
+  `;
+});
+</script>
+</div>
+</body>
+</html>
