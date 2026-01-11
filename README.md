@@ -35,7 +35,12 @@ Queue management web app for clinics with real-time updates.
    - Patient UI: http://localhost:5000
      <img width="2160" height="1440" alt="image" src="https://github.com/user-attachments/assets/6282006c-c933-473d-81f5-5f94078f16b0" />
 
+     <img width="2160" height="1440" alt="image" src="https://github.com/user-attachments/assets/0f153e13-a576-47dd-8fad-88bf605647a9" />
+
    - Staff Dashboard: http://localhost:5000/dashboard.html
+     <img width="2160" height="1440" alt="image" src="https://github.com/user-attachments/assets/d82ebe8c-5c0a-4393-92d3-d16c4642deab" />
+
+     <img width="2160" height="1440" alt="image" src="https://github.com/user-attachments/assets/dd338d66-3cc2-4c4a-b574-10bce91dc8fe" />
 
 ## Deploy
 ```bash
