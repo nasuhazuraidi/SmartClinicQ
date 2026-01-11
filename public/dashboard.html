@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SmartClinicQ Clinic Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+
+<body class="dashboard-page">
+  <div class="auth-shell" id="authShell">
+    <div class="card auth-card">
+      <h2>Staff Sign In</h2>
+      <p class="subtitle">Use your staff account to access the queue dashboard.</p>
+      <form id="loginForm">
+        <div class="input-group">
+          <label>Email</label>
+          <input type="email" id="staffEmail" placeholder="staff@clinic.com" required>
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input type="password" id="staffPassword" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="primary-btn">Sign In</button>
+      </form>
+      <p id="loginMsg"></p>
+    </div>
+  </div>
+
+  <div class="dashboard" id="dashboardShell" style="display:none;">
+    <header class="dashboard-header">
+      <div>
+        <h2>SmartClinicQ Staff Dashboard</h2>
+        <p class="subtitle">Call the next ticket, update status, and monitor the live queue.</p>
+      </div>
+      <div class="status-pill" id="queueCount">0 waiting</div>
+    </header>
+    <div class="dashboard-topbar">
+      <span class="subtitle" id="staffEmailDisplay">Signed in</span>
+      <button class="secondary-btn" id="logoutBtn">Sign Out</button>
+    </div>
+
+    <div class="card staff-controls">
+      <div class="row">
+        <div class="input-group">
+          <label>Service Type</label>
+          <select id="staffServiceType">
+            <option value="All">All Services</option>
+            <option value="Consultation">Doctor Consultation</option>
+            <option value="Pharmacy">Pharmacy</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Counter</label>
+          <select id="staffCounter" required>
+            <option value="">Select counter</option>
+            <option value="1">Counter 1</option>
+            <option value="2">Counter 2</option>
+            <option value="3">Counter 3</option>
+            <option value="4">Counter 4</option>
+            <option value="5">Counter 5</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="primary-btn" id="callNextBtn">Call Next</button>
+        <button class="secondary-btn" id="markServedBtn">Mark Served</button>
+        <button class="danger-btn" id="markSkippedBtn">Mark Skipped</button>
+      </div>
+      <p id="staffMsg"></p>
+    </div>
+
+    <div class="card">
+      <h3>Queue Overview</h3>
+      <div class="status-grid">
+        <div class="status-card">
+          <span class="label">Now Serving</span>
+          <strong id="nowServingStaff">-</strong>
+        </div>
+        <div class="status-card">
+          <span class="label">Selected Ticket</span>
+          <strong id="selectedTicket">-</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Queue Summary</h3>
+      <div class="status-grid summary-grid">
+        <div class="status-card">
+          <span class="label">Total Tickets</span>
+          <strong class="metric-value" id="totalTickets">0</strong>
+        </div>
+        <div class="status-card">
+          <span class="label">Waiting</span>
+          <strong class="metric-value" id="summaryWaiting">0</strong>
+        </div>
+        <div class="status-card">
+          <span class="label">Called</span>
+          <strong class="metric-value" id="summaryCalled">0</strong>
+        </div>
+        <div class="status-card">
+          <span class="label">Served</span>
+          <strong class="metric-value" id="summaryServed">0</strong>
+        </div>
+        <div class="status-card">
+          <span class="label">Skipped</span>
+          <strong class="metric-value" id="summarySkipped">0</strong>
+        </div>
+        <div class="status-card">
+          <span class="label">Avg Wait</span>
+          <strong class="metric-value" id="avgWaitTime">-</strong>
+        </div>
+        <div class="status-card">
+          <span class="label">Avg Service</span>
+          <strong class="metric-value" id="avgServiceTime">-</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Live Queue</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Ticket</th>
+            <th>Service</th>
+            <th>Patient</th>
+            <th>Time</th>
+            <th>Status</th>
+            <th>Counter</th>
+          </tr>
+        </thead>
+        <tbody id="queueTable">
+          <!-- Data will appear here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Firebase Init -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNss1xgeMguVtDCnLQipQ2SXrxizbLMcA",
+      authDomain: "smartclinicq-c2e3b.firebaseapp.com",
+      projectId: "smartclinicq-c2e3b",
+      storageBucket: "smartclinicq-c2e3b.firebasestorage.app",
+      messagingSenderId: "527129903406",
+      appId: "1:527129903406:web:79c2650995361a277c7abf",
+      measurementId: "G-MGT823SZBR"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const functions = firebase.functions();
+    const db = firebase.firestore();
+  </script>
+
+  <!-- STAFF QUEUE LOGIC -->
+  <script>
+    let selectedDocId = null;
+
+    function setStaffMessage(message) {
+      document.getElementById("staffMsg").textContent = message;
+    }
+
+    function setLoginMessage(message) {
+      document.getElementById("loginMsg").textContent = message;
+    }
+
+    function showDashboard(user) {
+      document.getElementById("authShell").style.display = "none";
+      document.getElementById("dashboardShell").style.display = "block";
+      document.getElementById("staffEmailDisplay").textContent = user.email || "Signed in";
+    }
+
+    function showLogin() {
+      document.getElementById("dashboardShell").style.display = "none";
+      document.getElementById("authShell").style.display = "flex";
+    }
+
+    function getStatusClass(status) {
+      const normalized = (status || "").toLowerCase();
+      if (normalized === "served") return "served";
+      if (normalized === "called") return "called";
+      if (normalized === "skipped") return "skipped";
+      return "waiting";
+    }
+
+    function getMillis(timestamp) {
+      if (!timestamp || typeof timestamp.toMillis !== "function") {
+        return null;
+      }
+      return timestamp.toMillis();
+    }
+
+    function formatMinutes(totalMs, samples) {
+      if (!samples) {
+        return "-";
+      }
+      const minutes = totalMs / 60000 / samples;
+      return `${minutes.toFixed(1)} min`;
+    }
+
+    async function callNextTicket() {
+      const serviceType = document.getElementById("staffServiceType").value;
+      const counter = document.getElementById("staffCounter").value.trim();
+      if (!counter) {
+        setStaffMessage("Please enter a counter number before calling next.");
+        return;
+      }
+
+      try {
+        const callNext = functions.httpsCallable("callNextTicket");
+        const result = await callNext({ serviceType, counter });
+        if (!result.data.ticketId) {
+          setStaffMessage("No waiting tickets for the selected service.");
+          return;
+        }
+        selectedDocId = result.data.ticketId;
+        setStaffMessage(`Now calling ${result.data.ticketNumber}.`);
+      } catch (error) {
+        setStaffMessage("Unable to call next ticket. Try again.");
+      }
+    }
+
+    async function updateSelectedTicket(status) {
+      if (!selectedDocId) {
+        setStaffMessage("Select a ticket from the table first.");
+        return;
+      }
+      try {
+        const updateStatus = functions.httpsCallable("updateTicketStatus");
+        await updateStatus({ docId: selectedDocId, status });
+        setStaffMessage(`Ticket marked ${status.toLowerCase()}.`);
+      } catch (error) {
+        setStaffMessage("Unable to update ticket status.");
+      }
+    }
+
+    document.getElementById("callNextBtn").addEventListener("click", callNextTicket);
+    document.getElementById("markServedBtn").addEventListener("click", () => updateSelectedTicket("Served"));
+    document.getElementById("markSkippedBtn").addEventListener("click", () => updateSelectedTicket("Skipped"));
+
+    document.getElementById("loginForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = document.getElementById("staffEmail").value.trim();
+      const password = document.getElementById("staffPassword").value;
+      setLoginMessage("");
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+      } catch (error) {
+        setLoginMessage("Sign-in failed. Check your email and password.");
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await auth.signOut();
+    });
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        showDashboard(user);
+      } else {
+        showLogin();
+      }
+    });
+
+    db.collection("appointments")
+      .orderBy("createdAt")
+      .onSnapshot(snapshot => {
+        const table = document.getElementById("queueTable");
+        const nowServing = document.getElementById("nowServingStaff");
+        const selectedTicket = document.getElementById("selectedTicket");
+        const queueCount = document.getElementById("queueCount");
+        const totalTickets = document.getElementById("totalTickets");
+        const summaryWaiting = document.getElementById("summaryWaiting");
+        const summaryCalled = document.getElementById("summaryCalled");
+        const summaryServed = document.getElementById("summaryServed");
+        const summarySkipped = document.getElementById("summarySkipped");
+        const avgWaitTime = document.getElementById("avgWaitTime");
+        const avgServiceTime = document.getElementById("avgServiceTime");
+        table.innerHTML = "";
+
+        let count = 1;
+        let nowServingTicket = "-";
+        let firstWaitingTicket = "-";
+        let firstWaitingCounter = "";
+        let totalCount = 0;
+        let waitingCount = 0;
+        let calledCount = 0;
+        let servedCount = 0;
+        let skippedCount = 0;
+        let waitSum = 0;
+        let waitSamples = 0;
+        let serviceSum = 0;
+        let serviceSamples = 0;
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const rowClass = doc.id === selectedDocId ? "selected-row" : "";
+          const status = data.status || "-";
+          const normalizedStatus = status.toLowerCase();
+          const createdAtMs = getMillis(data.createdAt);
+          const calledAtMs = getMillis(data.calledAt);
+          const updatedAtMs = getMillis(data.updatedAt);
+
+          totalCount++;
+          if (normalizedStatus === "waiting") {
+            waitingCount++;
+          } else if (normalizedStatus === "called") {
+            calledCount++;
+          } else if (normalizedStatus === "served") {
+            servedCount++;
+          } else if (normalizedStatus === "skipped") {
+            skippedCount++;
+          }
+
+          if (createdAtMs && calledAtMs) {
+            waitSum += calledAtMs - createdAtMs;
+            waitSamples++;
+          }
+
+          if (normalizedStatus === "served" && calledAtMs && updatedAtMs) {
+            serviceSum += updatedAtMs - calledAtMs;
+            serviceSamples++;
+          }
+
+          if (normalizedStatus !== "waiting" && normalizedStatus !== "called") {
+            return;
+          }
+
+          if (status === "Waiting") {
+            waitingCount++;
+            if (firstWaitingTicket === "-") {
+              firstWaitingTicket = data.ticketNumber || "-";
+              firstWaitingCounter = data.counter || "";
+            }
+          }
+          if (status === "Called" && nowServingTicket === "-") {
+            nowServingTicket = `${data.ticketNumber || "-"}${data.counter ? " - Counter " + data.counter : ""}`;
+          }
+
+          const statusClass = getStatusClass(status);
+          table.innerHTML += `
+            <tr class="${rowClass}" data-doc-id="${doc.id}">
+              <td>${count++}</td>
+              <td>${data.ticketNumber || "-"}</td>
+              <td>${data.serviceType || "-"}</td>
+              <td>${data.name || "-"}</td>
+              <td>${data.time || "-"}</td>
+              <td><span class="badge ${statusClass}">${status}</span></td>
+              <td>${data.counter || "-"}</td>
+            </tr>
+          `;
+        });
+
+        if (nowServingTicket === "-" && firstWaitingTicket !== "-") {
+          nowServingTicket = `${firstWaitingTicket}${firstWaitingCounter ? " - Counter " + firstWaitingCounter : ""}`;
+        }
+        nowServing.textContent = nowServingTicket;
+        queueCount.textContent = `${waitingCount} waiting`;
+        totalTickets.textContent = totalCount;
+        summaryWaiting.textContent = waitingCount;
+        summaryCalled.textContent = calledCount;
+        summaryServed.textContent = servedCount;
+        summarySkipped.textContent = skippedCount;
+        avgWaitTime.textContent = formatMinutes(waitSum, waitSamples);
+        avgServiceTime.textContent = formatMinutes(serviceSum, serviceSamples);
+
+        if (selectedDocId) {
+          const selectedRow = table.querySelector(`tr[data-doc-id="${selectedDocId}"]`);
+          if (selectedRow) {
+            selectedTicket.textContent = selectedRow.children[1].textContent;
+          } else {
+            selectedDocId = null;
+            selectedTicket.textContent = "-";
+          }
+        } else {
+          selectedTicket.textContent = "-";
+        }
+
+        Array.from(table.querySelectorAll("tr")).forEach(row => {
+          row.addEventListener("click", () => {
+            selectedDocId = row.getAttribute("data-doc-id");
+            const ticketCell = row.children[1];
+            selectedTicket.textContent = ticketCell ? ticketCell.textContent : "-";
+            setStaffMessage(`Selected ticket ${selectedTicket.textContent}.`);
+            Array.from(table.querySelectorAll("tr")).forEach(r => r.classList.remove("selected-row"));
+            row.classList.add("selected-row");
+          });
+        });
+      });
+  </script>
+
+</body>
+</html>

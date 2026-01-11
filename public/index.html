@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartClinicQ - Healthcare Portal</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <nav class="sidebar">
+    <div class="logo">SmartClinic<b>Q</b></div>
+    <button onclick="showSection('bookingSection')" class="nav-btn active">Book Appointment</button>
+    <button onclick="showSection('queueSection')" class="nav-btn">Live Queue</button>
+  </nav>
+
+  <main class="content">
+    
+    <section id="bookingSection">
+      <div class="card">
+        <h2>Get Your Queue Number</h2>
+        <p class="subtitle">Select your service and get your queue number.</p>
+        <form id="bookingForm">
+          <div class="input-group">
+            <label>Patient Name</label>
+            <input type="text" id="name" placeholder="Enter full name" required>
+          </div>
+          <div class="input-group">
+            <label>Phone Number</label>
+            <input type="tel" id="phone" placeholder="012-3456789" required>
+          </div>
+          <div class="input-group">
+            <label>Service Type</label>
+            <select id="serviceType" required>
+              <option value="Consultation">Doctor Consultation</option>
+              <option value="Pharmacy">Pharmacy</option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="input-group">
+              <label>Date</label>
+              <input type="date" id="date" required>
+            </div>
+            <div class="input-group">
+              <label>Time</label>
+              <input type="time" id="time" required>
+            </div>
+          </div>
+          <button type="submit" class="primary-btn">Confirm Booking</button>
+        </form>
+        <p id="responseMsg"></p>
+      </div>
+
+      <div class="card ticket-panel">
+        <h3>Your Queue Ticket</h3>
+        <div class="status-grid">
+          <div class="status-card">
+            <span class="label">Ticket</span>
+            <strong id="ticketNumber">-</strong>
+          </div>
+          <div class="status-card">
+            <span class="label">Position</span>
+            <strong id="queuePosition">-</strong>
+          </div>
+          <div class="status-card">
+            <span class="label">Status</span>
+            <strong id="ticketStatus">-</strong>
+          </div>
+          <div class="status-card">
+            <span class="label">Counter</span>
+            <strong id="assignedCounter">-</strong>
+          </div>
+        </div>
+        <div id="ticketAlert" class="alert"></div>
+      </div>
+
+      <div class="card mini-queue">
+        <h3>Queue Status</h3>
+        <p class="subtitle">Quick glance at current waiting list</p>
+        <div id="miniQueueList">
+           </div>
+      </div>
+
+    </section>
+
+    <section id="queueSection" style="display:none;">
+      <div class="card full-card">
+        <h2>Live Clinic Queue</h2>
+        <div class="now-serving">
+          <span class="label">Now Serving</span>
+          <strong id="nowServing">-</strong>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Ticket</th>
+              <th>Service</th>
+              <th>Patient</th>
+              <th>Time</th>
+              <th>Status</th>
+              <th>Counter</th>
+            </tr>
+          </thead>
+          <tbody id="queueTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // Firebase Init
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNss1xgeMguVtDCnLQipQ2SXrxizbLMcA",
+      authDomain: "smartclinicq-c2e3b.firebaseapp.com",
+      projectId: "smartclinicq-c2e3b",
+      storageBucket: "smartclinicq-c2e3b.firebasestorage.app",
+      messagingSenderId: "527129903406",
+      appId: "1:527129903406:web:79c2650995361a277c7abf",
+      measurementId: "G-MGT823SZBR"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const functions = firebase.functions();
+
+    function getStatusClass(status) {
+      const normalized = (status || "").toLowerCase();
+      if (normalized === "served") return "served";
+      if (normalized === "called") return "called";
+      if (normalized === "skipped") return "skipped";
+      return "waiting";
+    }
+
+    // Section Switching Logic
+    function showSection(sectionId) {
+      document.getElementById('bookingSection').style.display = 'none';
+      document.getElementById('queueSection').style.display = 'none';
+      document.getElementById(sectionId).style.display = 'block';
+      
+      // Update active button state
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    // Booking Submission
+    document.getElementById("bookingForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const serviceType = document.getElementById("serviceType").value;
+      const payload = {
+        name: document.getElementById("name").value,
+        phone: document.getElementById("phone").value,
+        serviceType,
+        date: document.getElementById("date").value,
+        time: document.getElementById("time").value
+      };
+
+      try {
+        const createTicket = functions.httpsCallable("createTicket");
+        const result = await createTicket(payload);
+        const ticketNumber = result.data.ticketNumber;
+        localStorage.setItem("lastTicketNumber", ticketNumber);
+        document.getElementById("responseMsg").innerText = `Success! Your ticket is ${ticketNumber}.`;
+        document.getElementById("bookingForm").reset();
+      } catch (error) {
+        document.getElementById("responseMsg").innerText = "Unable to create ticket. Please try again.";
+      }
+    });
+
+    // Real-time Sync for both Table and Mini-Queue
+    db.collection("appointments").orderBy("createdAt").onSnapshot(snapshot => {
+      const table = document.getElementById("queueTable");
+      const miniQueue = document.getElementById("miniQueueList");
+      const nowServing = document.getElementById("nowServing");
+      const ticketNumberEl = document.getElementById("ticketNumber");
+      const queuePositionEl = document.getElementById("queuePosition");
+      const ticketStatusEl = document.getElementById("ticketStatus");
+      const assignedCounterEl = document.getElementById("assignedCounter");
+      const ticketAlert = document.getElementById("ticketAlert");
+      table.innerHTML = "";
+      miniQueue.innerHTML = "";
+
+      let count = 1;
+      let nowServingTicket = "-";
+      let firstWaitingTicket = "-";
+      let firstWaitingCounter = "";
+      const lastTicketNumber = localStorage.getItem("lastTicketNumber");
+      let lastTicketPosition = "-";
+      let lastTicketStatus = "-";
+      let lastTicketCounter = "-";
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const status = data.status || "-";
+        const normalizedStatus = status.toLowerCase();
+
+        if (normalizedStatus !== "waiting" && normalizedStatus !== "called") {
+          return;
+        }
+
+        if (status === "Waiting" && firstWaitingTicket === "-") {
+          firstWaitingTicket = data.ticketNumber || "-";
+          firstWaitingCounter = data.counter || "";
+        }
+
+        if (status === "Called" && nowServingTicket === "-") {
+          nowServingTicket = `${data.ticketNumber || "-"}${data.counter ? " - Counter " + data.counter : ""}`;
+        }
+
+        if (lastTicketNumber && data.ticketNumber === lastTicketNumber) {
+          lastTicketPosition = count;
+          lastTicketStatus = status;
+          lastTicketCounter = data.counter || "-";
+        }
+
+        // Add to Full Table
+        const statusClass = getStatusClass(status);
+        table.innerHTML += `<tr><td>${count}</td><td>${data.ticketNumber || "-"}</td><td>${data.serviceType || "-"}</td><td>${data.name}</td><td>${data.time || "-"}</td><td><span class="badge ${statusClass}">${status}</span></td><td>${data.counter || "-"}</td></tr>`;
+
+        // Add to Mini View (Top 3 only)
+        if(count <= 3) {
+           miniQueue.innerHTML += `<div class="queue-item"><strong>${data.ticketNumber || "#" + count}</strong> ${data.name} <span class="time-tag">${data.serviceType || "-"}</span></div>`;
+        }
+        count++;
+      });
+
+      if (nowServingTicket === "-" && firstWaitingTicket !== "-") {
+        nowServingTicket = `${firstWaitingTicket}${firstWaitingCounter ? " - Counter " + firstWaitingCounter : ""}`;
+      }
+      nowServing.textContent = nowServingTicket;
+      ticketNumberEl.textContent = lastTicketNumber || "-";
+      queuePositionEl.textContent = lastTicketPosition;
+      ticketStatusEl.textContent = lastTicketStatus;
+      assignedCounterEl.textContent = lastTicketCounter;
+
+      if (lastTicketStatus === "Called") {
+        ticketAlert.textContent = `Your number ${lastTicketNumber} is called. Please proceed to Counter ${lastTicketCounter}.`;
+        ticketAlert.classList.add("show");
+      } else {
+        ticketAlert.textContent = "";
+        ticketAlert.classList.remove("show");
+      }
+    });
+  </script>
+</body>
+</html>
