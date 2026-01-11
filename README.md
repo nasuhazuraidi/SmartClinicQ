@@ -33,6 +33,8 @@ Queue management web app for clinics with real-time updates.
 
 3. Open:
    - Patient UI: http://localhost:5000
+     <img width="2160" height="1440" alt="image" src="https://github.com/user-attachments/assets/6282006c-c933-473d-81f5-5f94078f16b0" />
+
    - Staff Dashboard: http://localhost:5000/dashboard.html
 
 ## Deploy
