@@ -1,4 +1,4 @@
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -31,7 +31,8 @@ function normalizeString(value, fieldName) {
   return value.trim();
 }
 
-exports.createTicket = functions.https.onCall(async (data) => {
+exports.createTicket = functions.https.onCall(async (data, context) => {
+  requireAuth(context);
   const name = normalizeString(data.name, "name");
   const phone = normalizeString(data.phone, "phone");
   const date = normalizeString(data.date, "date");

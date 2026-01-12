@@ -31,116 +31,172 @@
     </div>
   </div>
 
-  <div class="dashboard" id="dashboardShell" style="display:none;">
-    <header class="dashboard-header">
-      <div>
+  <div id="dashboardShell" style="display:none;">
+    <nav class="sidebar">
+      <div class="logo">SmartClinic<b>Q</b></div>
+      <button class="nav-btn active" onclick="showStaffSection('queueControlSection', this)">Queue Control</button>
+      <button class="nav-btn" onclick="showStaffSection('createTicketSection', this)">Create Ticket</button>
+      <div class="sidebar-footer">
+        <span class="subtitle" id="staffEmailDisplay">Signed in</span>
+        <button class="secondary-btn" id="logoutBtn">Sign Out</button>
+      </div>
+    </nav>
+
+    <main class="content dashboard-content">
+      <div class="dashboard">
+        <header class="dashboard-header">
+          <div>
         <h2>SmartClinicQ Staff Dashboard</h2>
-        <p class="subtitle">Call the next ticket, update status, and monitor the live queue.</p>
-      </div>
-      <div class="status-pill" id="queueCount">0 waiting</div>
-    </header>
-    <div class="dashboard-topbar">
-      <span class="subtitle" id="staffEmailDisplay">Signed in</span>
-      <button class="secondary-btn" id="logoutBtn">Sign Out</button>
-    </div>
+        <p class="subtitle">Manage the live queue and call patients forward.</p>
+          </div>
+          <div class="status-pill" id="queueCount">0 waiting</div>
+        </header>
 
-    <div class="card staff-controls">
-      <div class="row">
-        <div class="input-group">
-          <label>Service Type</label>
-          <select id="staffServiceType">
-            <option value="All">All Services</option>
-            <option value="Consultation">Doctor Consultation</option>
-            <option value="Pharmacy">Pharmacy</option>
-          </select>
+        <section id="queueControlSection">
+      <div class="card staff-controls">
+        <div class="row">
+          <div class="input-group">
+            <label>Service Type</label>
+            <select id="staffServiceType">
+              <option value="All">All Services</option>
+              <option value="Consultation">Doctor Consultation</option>
+              <option value="Pharmacy">Pharmacy</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Counter</label>
+            <select id="staffCounter" required>
+              <option value="">Select counter</option>
+              <option value="1">Counter 1</option>
+              <option value="2">Counter 2</option>
+              <option value="3">Counter 3</option>
+              <option value="4">Counter 4</option>
+              <option value="5">Counter 5</option>
+            </select>
+          </div>
         </div>
-        <div class="input-group">
-          <label>Counter</label>
-          <select id="staffCounter" required>
-            <option value="">Select counter</option>
-            <option value="1">Counter 1</option>
-            <option value="2">Counter 2</option>
-            <option value="3">Counter 3</option>
-            <option value="4">Counter 4</option>
-            <option value="5">Counter 5</option>
-          </select>
+        <div class="btn-row">
+          <button class="primary-btn" id="callNextBtn">Call Next</button>
+          <button class="secondary-btn" id="markServedBtn">Mark Served</button>
+          <button class="danger-btn" id="markSkippedBtn">Mark Skipped</button>
         </div>
+        <p id="staffMsg"></p>
       </div>
-      <div class="btn-row">
-        <button class="primary-btn" id="callNextBtn">Call Next</button>
-        <button class="secondary-btn" id="markServedBtn">Mark Served</button>
-        <button class="danger-btn" id="markSkippedBtn">Mark Skipped</button>
-      </div>
-      <p id="staffMsg"></p>
-    </div>
 
-    <div class="card">
-      <h3>Queue Overview</h3>
-      <div class="status-grid">
-        <div class="status-card">
-          <span class="label">Now Serving</span>
-          <strong id="nowServingStaff">-</strong>
-        </div>
-        <div class="status-card">
-          <span class="label">Selected Ticket</span>
-          <strong id="selectedTicket">-</strong>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Queue Summary</h3>
-      <div class="status-grid summary-grid">
-        <div class="status-card">
-          <span class="label">Total Tickets</span>
-          <strong class="metric-value" id="totalTickets">0</strong>
-        </div>
-        <div class="status-card">
-          <span class="label">Waiting</span>
-          <strong class="metric-value" id="summaryWaiting">0</strong>
-        </div>
-        <div class="status-card">
-          <span class="label">Called</span>
-          <strong class="metric-value" id="summaryCalled">0</strong>
-        </div>
-        <div class="status-card">
-          <span class="label">Served</span>
-          <strong class="metric-value" id="summaryServed">0</strong>
-        </div>
-        <div class="status-card">
-          <span class="label">Skipped</span>
-          <strong class="metric-value" id="summarySkipped">0</strong>
-        </div>
-        <div class="status-card">
-          <span class="label">Avg Wait</span>
-          <strong class="metric-value" id="avgWaitTime">-</strong>
-        </div>
-        <div class="status-card">
-          <span class="label">Avg Service</span>
-          <strong class="metric-value" id="avgServiceTime">-</strong>
+      <div class="card">
+        <h3>Queue Overview</h3>
+        <div class="status-grid">
+          <div class="status-card">
+            <span class="label">Now Serving</span>
+            <strong id="nowServingStaff">-</strong>
+          </div>
+          <div class="status-card">
+            <span class="label">Selected Ticket</span>
+            <strong id="selectedTicket">-</strong>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <h3>Live Queue</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>No</th>
-            <th>Ticket</th>
-            <th>Service</th>
-            <th>Patient</th>
-            <th>Time</th>
-            <th>Status</th>
-            <th>Counter</th>
-          </tr>
-        </thead>
-        <tbody id="queueTable">
-          <!-- Data will appear here -->
-        </tbody>
-      </table>
-    </div>
+      <div class="card">
+        <h3>Queue Summary</h3>
+        <div class="status-grid summary-grid">
+          <div class="status-card">
+            <span class="label">Total Tickets</span>
+            <strong class="metric-value" id="totalTickets">0</strong>
+          </div>
+          <div class="status-card">
+            <span class="label">Waiting</span>
+            <strong class="metric-value" id="summaryWaiting">0</strong>
+          </div>
+          <div class="status-card">
+            <span class="label">Called</span>
+            <strong class="metric-value" id="summaryCalled">0</strong>
+          </div>
+          <div class="status-card">
+            <span class="label">Served</span>
+            <strong class="metric-value" id="summaryServed">0</strong>
+          </div>
+          <div class="status-card">
+            <span class="label">Skipped</span>
+            <strong class="metric-value" id="summarySkipped">0</strong>
+          </div>
+          <div class="status-card">
+            <span class="label">Avg Wait</span>
+            <strong class="metric-value" id="avgWaitTime">-</strong>
+          </div>
+          <div class="status-card">
+            <span class="label">Avg Service</span>
+            <strong class="metric-value" id="avgServiceTime">-</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Live Queue</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Ticket</th>
+              <th>Service</th>
+              <th>Patient</th>
+              <th>Time</th>
+              <th>Status</th>
+              <th>Counter</th>
+            </tr>
+          </thead>
+          <tbody id="queueTable">
+            <!-- Data will appear here -->
+          </tbody>
+        </table>
+      </div>
+        </section>
+
+        <section id="createTicketSection" style="display:none;">
+      <div class="card">
+        <h3>Create Ticket</h3>
+        <p class="subtitle">Staff can create a queue ticket for walk-in patients.</p>
+        <form id="createTicketForm">
+          <div class="row">
+            <div class="input-group">
+              <label>Patient Name</label>
+              <input type="text" id="staffPatientName" placeholder="Full name" required>
+            </div>
+            <div class="input-group">
+              <label>Phone Number</label>
+              <input type="tel" id="staffPatientPhone" placeholder="012-3456789" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="input-group">
+              <label>Service Type</label>
+              <select id="staffPatientService" required>
+                <option value="Consultation">Doctor Consultation</option>
+                <option value="Pharmacy">Pharmacy</option>
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Visit Date</label>
+              <input type="date" id="staffPatientDate" required>
+            </div>
+          </div>
+          <div class="row">
+            <div class="input-group">
+              <label>Visit Time</label>
+              <input type="time" id="staffPatientTime" required>
+            </div>
+            <div class="input-group">
+              <label>Ticket Result</label>
+              <input type="text" id="staffTicketResult" placeholder="Ticket number" readonly>
+            </div>
+          </div>
+          <button type="submit" class="primary-btn">Create Ticket</button>
+        </form>
+        <p id="staffTicketMsg"></p>
+      </div>
+        </section>
+      </div>
+    </main>
   </div>
 
   <!-- Firebase Init -->
@@ -182,6 +238,17 @@
     function showLogin() {
       document.getElementById("dashboardShell").style.display = "none";
       document.getElementById("authShell").style.display = "flex";
+    }
+
+    function showStaffSection(sectionId, trigger) {
+      document.getElementById("queueControlSection").style.display = "none";
+      document.getElementById("createTicketSection").style.display = "none";
+      document.getElementById(sectionId).style.display = "block";
+
+      document.querySelectorAll(".sidebar .nav-btn").forEach(btn => btn.classList.remove("active"));
+      if (trigger) {
+        trigger.classList.add("active");
+      }
     }
 
     function getStatusClass(status) {
@@ -242,6 +309,31 @@
         setStaffMessage("Unable to update ticket status.");
       }
     }
+
+    document.getElementById("createTicketForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const payload = {
+        name: document.getElementById("staffPatientName").value,
+        phone: document.getElementById("staffPatientPhone").value,
+        serviceType: document.getElementById("staffPatientService").value,
+        date: document.getElementById("staffPatientDate").value,
+        time: document.getElementById("staffPatientTime").value
+      };
+      const resultField = document.getElementById("staffTicketResult");
+      const messageField = document.getElementById("staffTicketMsg");
+      resultField.value = "";
+      messageField.textContent = "";
+
+      try {
+        const createTicket = functions.httpsCallable("createTicket");
+        const result = await createTicket(payload);
+        resultField.value = result.data.ticketNumber;
+        messageField.textContent = `Ticket created: ${result.data.ticketNumber}`;
+        document.getElementById("createTicketForm").reset();
+      } catch (error) {
+        messageField.textContent = "Unable to create ticket.";
+      }
+    });
 
     document.getElementById("callNextBtn").addEventListener("click", callNextTicket);
     document.getElementById("markServedBtn").addEventListener("click", () => updateSelectedTicket("Served"));
